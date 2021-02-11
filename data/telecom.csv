@@ -1,0 +1,11 @@
+customerID,MonthlyCharges,TotalCharges,PaymentMethod,Churn
+7590-VHVEG,29.85,109.9,Electronic check,yes
+5575-GNVDE,56.95,na,Mailed check,yes
+3668-QPYBK,,108.15,--,yes
+7795-CFOCW,42.3,1840.75,Bank transfer,no
+9237-HQITU,70.7,NA,Electronic check,no
+9305-CDSKC,Nan,820.5,--,yes
+1452-KIOVK,89.1,1949.4,Credit card,no
+6713-OKOMC,,N/A,,yes
+7892-POOKP,104.8,3046.05,Electronic check,no
+8451-AJOMK,54.1,354.95,Electronic check,no

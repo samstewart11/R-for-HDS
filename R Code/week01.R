@@ -68,7 +68,6 @@ df1[,2]
 df2[1,]
 df2[,2]
 df1[1:2,]
-df2[3:4,1:3]
 
 #dollar-sign operator
 df1$x
@@ -97,7 +96,7 @@ Hmisc::describe(dat)
 #numbers, characters and factors
 d1 = read.csv("data/testData01.csv",header=TRUE)
 str(d1)
-d1$num1 = as.numeric(d1$num1)
+d1$num2 = as.numeric(d1$num2)
 str(d1)
 
 d2 = read.csv("data/testData01.csv",header=TRUE,na.strings = '.')
@@ -109,4 +108,4 @@ table(dat$SEX)
 dat$BMICat = cut(dat$BMI,breaks=c(0,18.5,25,30,Inf))
 
 ###Breakout 01: 
-dat.clean = read.csv("https://raw.githubusercontent.com/dataoptimal/posts/master/data%20cleaning%20with%20R%20and%20the%20tidyverse/telecom.csv")
+dat.clean = read.csv("https://raw.githubusercontent.com/dataoptimal/posts/master/data%20cleaning%20with%20R%20and%20the%20tidyverse/telecom.csv",na.strings=c("na","N/A","--"))

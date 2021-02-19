@@ -48,22 +48,24 @@ has observations on all subjects 1-10, `dat02` has subjects 1-6, plus
 two new subjects, and `dat03` has two observations for the first four
 subjects.
 
-    #investgating the actions of merge and dplyr with repeated ids
-    dat01 = data.frame(
-      id = 1:10,
-      x1 = rep(letters[1:5],2),
-      x2 = rep(LETTERS[1:2],5)
-    )
-    dat02 = data.frame(
-      id = c(1:6,11,12),
-      y1 = rep(1:4,2),
-      y2 = 'a'
-    )
-    dat03 = data.frame(
-      id = rep(1:4,2),
-      z1 = -1*(1:8)
-    )
-    dat01
+``` r
+#investgating the actions of merge and dplyr with repeated ids
+dat01 = data.frame(
+  id = 1:10,
+  x1 = rep(letters[1:5],2),
+  x2 = rep(LETTERS[1:2],5)
+)
+dat02 = data.frame(
+  id = c(1:6,11,12),
+  y1 = rep(1:4,2),
+  y2 = 'a'
+)
+dat03 = data.frame(
+  id = rep(1:4,2),
+  z1 = -1*(1:8)
+)
+dat01
+```
 
     ##    id x1 x2
     ## 1   1  a  A
@@ -77,7 +79,9 @@ subjects.
     ## 9   9  d  A
     ## 10 10  e  B
 
-    dat02
+``` r
+dat02
+```
 
     ##   id y1 y2
     ## 1  1  1  a
@@ -89,7 +93,9 @@ subjects.
     ## 7 11  3  a
     ## 8 12  4  a
 
-    dat03
+``` r
+dat03
+```
 
     ##   id z1
     ## 1  1 -1
@@ -119,8 +125,10 @@ where `n` is the number of rows. I mention it here because, when looking
 at the output of the `merge()` function you can confuse the rownames
 (first column) with the `id` (second column).
 
-    #inner join
-    merge(dat01,dat02,by = 'id')
+``` r
+#inner join
+merge(dat01,dat02,by = 'id')
+```
 
     ##   id x1 x2 y1 y2
     ## 1  1  a  A  1  a
@@ -130,8 +138,10 @@ at the output of the `merge()` function you can confuse the rownames
     ## 5  5  e  A  1  a
     ## 6  6  a  B  2  a
 
-    #left join
-    merge(dat01,dat02,all.x = TRUE)
+``` r
+#left join
+merge(dat01,dat02,all.x = TRUE)
+```
 
     ##    id x1 x2 y1   y2
     ## 1   1  a  A  1    a
@@ -145,8 +155,10 @@ at the output of the `merge()` function you can confuse the rownames
     ## 9   9  d  A NA <NA>
     ## 10 10  e  B NA <NA>
 
-    #right join
-    merge(dat01,dat02,all.y=TRUE)
+``` r
+#right join
+merge(dat01,dat02,all.y=TRUE)
+```
 
     ##   id   x1   x2 y1 y2
     ## 1  1    a    A  1  a
@@ -158,8 +170,10 @@ at the output of the `merge()` function you can confuse the rownames
     ## 7 11 <NA> <NA>  3  a
     ## 8 12 <NA> <NA>  4  a
 
-    #outer join
-    merge(dat01,dat02,all.x=TRUE,all.y=TRUE)
+``` r
+#outer join
+merge(dat01,dat02,all.x=TRUE,all.y=TRUE)
+```
 
     ##    id   x1   x2 y1   y2
     ## 1   1    a    A  1    a
@@ -179,9 +193,11 @@ at the output of the `merge()` function you can confuse the rownames
 observations on a subject - you can also see this behaviour in some of
 the GIFs on the tutorial page.
 
-    #non-unique data: left unique
-    #inner
-    merge(dat01,dat03)
+``` r
+#non-unique data: left unique
+#inner
+merge(dat01,dat03)
+```
 
     ##   id x1 x2 z1
     ## 1  1  a  A -1
@@ -193,8 +209,10 @@ the GIFs on the tutorial page.
     ## 7  4  d  B -4
     ## 8  4  d  B -8
 
-    #outer
-    merge(dat01,dat03,all.x=TRUE,all.y=TRUE)
+``` r
+#outer
+merge(dat01,dat03,all.x=TRUE,all.y=TRUE)
+```
 
     ##    id x1 x2 z1
     ## 1   1  a  A -1
@@ -212,8 +230,10 @@ the GIFs on the tutorial page.
     ## 13  9  d  A NA
     ## 14 10  e  B NA
 
-    #left join
-    merge(dat01,dat03,all.x = TRUE)
+``` r
+#left join
+merge(dat01,dat03,all.x = TRUE)
+```
 
     ##    id x1 x2 z1
     ## 1   1  a  A -1
@@ -231,8 +251,10 @@ the GIFs on the tutorial page.
     ## 13  9  d  A NA
     ## 14 10  e  B NA
 
-    #right join
-    merge(dat01,dat03,all.y=TRUE)
+``` r
+#right join
+merge(dat01,dat03,all.y=TRUE)
+```
 
     ##   id x1 x2 z1
     ## 1  1  a  A -1
@@ -244,9 +266,11 @@ the GIFs on the tutorial page.
     ## 7  4  d  B -4
     ## 8  4  d  B -8
 
-    #non-unique data: right unique
-    #inner
-    merge(dat03,dat01)
+``` r
+#non-unique data: right unique
+#inner
+merge(dat03,dat01)
+```
 
     ##   id z1 x1 x2
     ## 1  1 -1  a  A
@@ -258,8 +282,10 @@ the GIFs on the tutorial page.
     ## 7  4 -4  d  B
     ## 8  4 -8  d  B
 
-    #outer
-    merge(dat03,dat01,all.x=TRUE,all.y=TRUE)
+``` r
+#outer
+merge(dat03,dat01,all.x=TRUE,all.y=TRUE)
+```
 
     ##    id z1 x1 x2
     ## 1   1 -1  a  A
@@ -277,8 +303,10 @@ the GIFs on the tutorial page.
     ## 13  9 NA  d  A
     ## 14 10 NA  e  B
 
-    #left join
-    merge(dat03,dat01,all.x = TRUE)
+``` r
+#left join
+merge(dat03,dat01,all.x = TRUE)
+```
 
     ##   id z1 x1 x2
     ## 1  1 -1  a  A
@@ -290,8 +318,10 @@ the GIFs on the tutorial page.
     ## 7  4 -4  d  B
     ## 8  4 -8  d  B
 
-    #right join
-    merge(dat03,dat01,all.y=TRUE)
+``` r
+#right join
+merge(dat03,dat01,all.y=TRUE)
+```
 
     ##    id z1 x1 x2
     ## 1   1 -1  a  A
@@ -320,11 +350,13 @@ interested, through the `tidyquery` library, which translates SQL to
 `dplyr`. There’s also a `dbplyr` library to do the reverse, if you want
 to write data manipulation in R and translate it to SQL.
 
-    #testing SQL queries
-    library(tidyquery)
-    query("select * from 
-          dat01 left join dat02
-          using(id)")
+``` r
+#testing SQL queries
+library(tidyquery)
+query("select * from 
+      dat01 left join dat02
+      using(id)")
+```
 
     ##    id x1 x2 y1   y2
     ## 1   1  a  A  1    a
@@ -361,36 +393,38 @@ control reading and then two readings under intervention conditions 1
 and 2. The first dataset is the wide format, the second is the long
 format.
 
-    #melting and molding datasets in R.  
+``` r
+#melting and molding datasets in R.  
 
-    olddata_wide <- read.table(header=TRUE, text='
-     subject sex control cond1 cond2
-           1   M     7.9  12.3  10.7
-           2   F     6.3  10.6  11.1
-           3   F     9.5  13.1  13.8
-           4   M    11.5  13.4  12.9
-    ')
+olddata_wide <- read.table(header=TRUE, text='
+ subject sex control cond1 cond2
+       1   M     7.9  12.3  10.7
+       2   F     6.3  10.6  11.1
+       3   F     9.5  13.1  13.8
+       4   M    11.5  13.4  12.9
+')
 
-    # Make sure the subject column is a factor
-    olddata_wide$subject <- factor(olddata_wide$subject)
-    olddata_long <- read.table(header=TRUE, text='
-     subject sex condition measurement
-           1   M   control         7.9
-           1   M     cond1        12.3
-           1   M     cond2        10.7
-           2   F   control         6.3
-           2   F     cond1        10.6
-           2   F     cond2        11.1
-           3   F   control         9.5
-           3   F     cond1        13.1
-           3   F     cond2        13.8
-           4   M   control        11.5
-           4   M     cond1        13.4
-           4   M     cond2        12.9
-    ')
-    # Make sure the subject column is a factor
-    olddata_long$subject <- factor(olddata_long$subject)
-    olddata_wide
+# Make sure the subject column is a factor
+olddata_wide$subject <- factor(olddata_wide$subject)
+olddata_long <- read.table(header=TRUE, text='
+ subject sex condition measurement
+       1   M   control         7.9
+       1   M     cond1        12.3
+       1   M     cond2        10.7
+       2   F   control         6.3
+       2   F     cond1        10.6
+       2   F     cond2        11.1
+       3   F   control         9.5
+       3   F     cond1        13.1
+       3   F     cond2        13.8
+       4   M   control        11.5
+       4   M     cond1        13.4
+       4   M     cond2        12.9
+')
+# Make sure the subject column is a factor
+olddata_long$subject <- factor(olddata_long$subject)
+olddata_wide
+```
 
     ##   subject sex control cond1 cond2
     ## 1       1   M     7.9  12.3  10.7
@@ -398,7 +432,9 @@ format.
     ## 3       3   F     9.5  13.1  13.8
     ## 4       4   M    11.5  13.4  12.9
 
-    olddata_long
+``` r
+olddata_long
+```
 
     ##    subject sex condition measurement
     ## 1        1   M   control         7.9
@@ -439,14 +475,16 @@ trying to force myself to use moving forward. `data` is the dataset,
 `cols` is the list of columns that are being transformed to long format,
 and then `names_to` and `values_to` are the names of the new columns
 
-    library(tidyr)
-    data_long = pivot_longer(olddata_wide,
-                             control:cond2,
-                             names_to="condition",
-                             values_to="measurement")
-    #I use the multi-line functions for ease of reading, but that is unnecessary
-    data_long = pivot_longer(olddata_wide,control:cond2,"condition","measurement")
-    data_long
+``` r
+library(tidyr)
+data_long = pivot_longer(olddata_wide,
+                         control:cond2,
+                         names_to="condition",
+                         values_to="measurement")
+#I use the multi-line functions for ease of reading, but that is unnecessary
+data_long = pivot_longer(olddata_wide,control:cond2,"condition","measurement")
+data_long
+```
 
     ## # A tibble: 12 x 4
     ##    subject sex   condition value
@@ -482,11 +520,13 @@ and then `names_to` and `values_to` are the names of the new columns
       ...
     )
 
-    #and from long to wide
-    data_wide = pivot_wider(olddata_long,
-                            names_from="condition",
-                            values_from='measurement')
-    data_wide
+``` r
+#and from long to wide
+data_wide = pivot_wider(olddata_long,
+                        names_from="condition",
+                        values_from='measurement')
+data_wide
+```
 
     ## # A tibble: 4 x 5
     ##   subject sex   control cond1 cond2
@@ -518,12 +558,14 @@ specifying both `id.vars` (the variables that identify a subject) and
 `tidyr` functions don’t do that because there are other functions within
 the tidyverse that drop variables, as we’ll see later.
 
-    #historically, reshape2 was more popular than tidyr
-    #melt makes wide data long
-    library(reshape2)
-    #if you specify one of id.vars and measure.vars, 
-    #it will assume everything else falls in the other
-    melt(olddata_wide,id.vars=c("subject","sex"))
+``` r
+#historically, reshape2 was more popular than tidyr
+#melt makes wide data long
+library(reshape2)
+#if you specify one of id.vars and measure.vars, 
+#it will assume everything else falls in the other
+melt(olddata_wide,id.vars=c("subject","sex"))
+```
 
     ##    subject sex variable value
     ## 1        1   M  control   7.9
@@ -539,7 +581,9 @@ the tidyverse that drop variables, as we’ll see later.
     ## 11       3   F    cond2  13.8
     ## 12       4   M    cond2  12.9
 
-    melt(olddata_wide,measure.vars = c("control","cond1","cond2"))
+``` r
+melt(olddata_wide,measure.vars = c("control","cond1","cond2"))
+```
 
     ##    subject sex variable value
     ## 1        1   M  control   7.9
@@ -555,9 +599,11 @@ the tidyverse that drop variables, as we’ll see later.
     ## 11       3   F    cond2  13.8
     ## 12       4   M    cond2  12.9
 
-    #specifiy both and we can drop variables
-    #in this one we drop sex from the dataset
-    melt(olddata_wide,id.vars=c("subject"),measure.vars = c("control","cond1","cond2"))
+``` r
+#specifiy both and we can drop variables
+#in this one we drop sex from the dataset
+melt(olddata_wide,id.vars=c("subject"),measure.vars = c("control","cond1","cond2"))
+```
 
     ##    subject variable value
     ## 1        1  control   7.9
@@ -573,11 +619,13 @@ the tidyverse that drop variables, as we’ll see later.
     ## 11       3    cond2  13.8
     ## 12       4    cond2  12.9
 
-    #we can set the variable and value names, as with the pivot_ functions
-    melt(olddata_wide,id.vars=c("subject","sex"),
-         measure.vars = c("control","cond1","cond2"),
-         variable.name="condition",
-         value.name='measurement')
+``` r
+#we can set the variable and value names, as with the pivot_ functions
+melt(olddata_wide,id.vars=c("subject","sex"),
+     measure.vars = c("control","cond1","cond2"),
+     variable.name="condition",
+     value.name='measurement')
+```
 
     ##    subject sex condition measurement
     ## 1        1   M   control         7.9
@@ -611,7 +659,9 @@ the tidyverse that drop variables, as we’ll see later.
 `dcast` takes wide data to long, using a formula. We’ll explore formulas
 a bit more next week, and then more when we get to regression.
 
-    dcast(olddata_long,subject+sex~condition,value.var="measurement")
+``` r
+dcast(olddata_long,subject+sex~condition,value.var="measurement")
+```
 
     ##   subject sex cond1 cond2 control
     ## 1       1   M  12.3  10.7     7.9

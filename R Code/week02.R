@@ -1,12 +1,15 @@
 ## ----setup ---------------------------------------------
 library(readxl)
 library(Hmisc)
+
 library(kableExtra)
 library(dplyr)
 library(tidyr)
+library(tibble)
+
 library(RColorBrewer)
 library(gridExtra)
-library(tibble)
+
 library(reshape2)
 
 palette(c("black",brewer.pal(9,'Set1')))
@@ -75,6 +78,7 @@ query("select * from
       dat01 left join dat02
       using(id)")
 
+library(dbplyr)
 
 ## ----longWideData-----------------------------------------------------
 #melting and molding datasets in R.  

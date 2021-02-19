@@ -11,7 +11,7 @@
 
 <meta name="author" content="Sam Stewart" />
 
-<meta name="date" content="2021-01-14" />
+<meta name="date" content="2021-02-19" />
 
 <title>R for Health Data Science</title>
 
@@ -1542,7 +1542,7 @@ div.tocify {
 <h1 class="title toc-ignore">R for Health Data Science</h1>
 <h3 class="subtitle">Week 02: Data Manipulation</h3>
 <h4 class="author">Sam Stewart</h4>
-<h4 class="date">2021-01-14</h4>
+<h4 class="date">2021-02-19</h4>
 
 </div>
 
@@ -2041,7 +2041,7 @@ melt(olddata_wide,id.vars=c(&quot;subject&quot;,&quot;sex&quot;),
   drop = TRUE,
   value.var = guess_value(data)
 )</code></pre>
-<p><code>dcast</code> takes wide data to long, using a formula. We’ll explore formulas a bit more next week, and then more when we get to regression.</p>
+<p><code>dcast</code> takes long data to wide, using a formula. We’ll explore formulas a bit more next week, and then more when we get to regression.</p>
 <pre class="r"><code>dcast(olddata_long,subject+sex~condition,value.var=&quot;measurement&quot;)</code></pre>
 <pre><code>##   subject sex cond1 cond2 control
 ## 1       1   M  12.3  10.7     7.9
@@ -2056,20 +2056,16 @@ melt(olddata_wide,id.vars=c(&quot;subject&quot;,&quot;sex&quot;),
 <p>Download the two datasets and do the following</p>
 <ol style="list-style-type: decimal">
 <li>Load the datasets into R</li>
-<li>Format the variables - get numbers and factors correct</li>
-</ol>
+<li>Format the variables - get numbers and factors correct
 <ul>
 <li>leave formatting the dates to the end, since we haven’t covered that yet</li>
-</ul>
-<ol start="3" style="list-style-type: decimal">
+</ul></li>
 <li>Join the two datasets into a single dataset</li>
-<li>Transform the data into a long dataset</li>
-</ol>
+<li>Transform the data into a long dataset
 <ul>
 <li>start with a single long variable recording the BP values</li>
 <li>as a second step, make it a long dataset that records both the BP and the date for each measurement</li>
-</ul>
-<ol start="5" style="list-style-type: decimal">
+</ul></li>
 <li>For the dates as <code>Date</code> data type. See <code>as.Date()</code> for details on formatting date variables</li>
 </ol>
 </div>

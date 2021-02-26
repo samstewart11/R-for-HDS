@@ -108,4 +108,4 @@ table(dat$SEX)
 dat$BMICat = cut(dat$BMI,breaks=c(0,18.5,25,30,Inf))
 
 ###Breakout 01: 
-dat.clean = read.csv("https://raw.githubusercontent.com/dataoptimal/posts/master/data%20cleaning%20with%20R%20and%20the%20tidyverse/telecom.csv",na.strings=c("na","N/A","--"))
+dat.clean = read.csv("https://raw.githubusercontent.com/dataoptimal/posts/master/data%20cleaning%20with%20R%20and%20the%20tidyverse/telecom.csv",na.strings=c("na","N/A","--",""))

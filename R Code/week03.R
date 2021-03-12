@@ -145,6 +145,8 @@ plot(mtcars$mpg,mtcars$disp)
 plot(mtcars$mpg,mtcars$disp,pch=mtcars$gear,xlab='MPG',ylab='Displacement')
 plot(mtcars$mpg,mtcars$disp,col=mtcars$gear,xlab='MPG',ylab='Displacement',pch=19)
 legend("topright",pc=19,col=3:5,legend=3:5)
+boxplot(SYSBP~SEX,data=dat,col=3:2)
+boxplot(TOTCHOL~CURSMOKE+SEX,data=dat,col=cols,ylim=c(100,450))
 dev.off()
 
 
@@ -164,8 +166,8 @@ d = as.data.frame(summary(pred))
 names(d) = gsub("at\\((.*)\\)","\\1",names(d))#ok now you're just showing off
 #This is a good ggplot function learn how ggplot is built in parts
 ggplot(d,aes(x=SEX, y=Prediction, colour=CURSMOKE, group=CURSMOKE))+
-  geom_errorbar(aes(ymin=lower,ymax=upper),width=0.05,size=2)+
   geom_line(size=2)+
+  geom_errorbar(aes(ymin=lower,ymax=upper),width=0.05,size=2)+
   geom_point()
 #I can't decide if the fat lines are better
 ggplot(d,aes(x=CURSMOKE, y=Prediction, colour=SEX, group=SEX))+

@@ -8,9 +8,9 @@ Each session will be 90 minutes (Fridays, 9:30-11:00).  We will start with 45 mi
 1. Intro to R
 2. Data manipulation
 3. Graphics
-4. Tidyverse
 4. Biostats 1 (hypothesis tests and regression)
 5. Reporting
+6. Tidyverse
 6. Biostats 2 (glm, gee, hierarchical models, survey weights, ...)
 7. Web Scraping
 8. Data Mining (focus on classification)

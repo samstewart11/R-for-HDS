@@ -53,7 +53,7 @@ palette(c("black",brewer.pal(9,'Set1')))
 dat = read.csv("data/framinghamFirst.csv",header=TRUE,
                na.strings=".",stringsAsFactors=FALSE)
 dat$BMIGroups = cut(dat$BMI,breaks=c(0,18.5,25,30,Inf),
-                    labels=c("Underweight","Normal","Overweight","Obese"))
+    labels=c("Underweight","Normal","Overweight","Obese"))
 
 ```
 
@@ -116,8 +116,8 @@ head(mtcars)
 plot(mtcars$mpg,mtcars$disp)
 plot(mtcars$mpg,mtcars$disp,pch=mtcars$gear,xlab='MPG',ylab='Displacement')
 plot(mtcars$mpg,mtcars$disp,col=mtcars$gear,xlab='MPG',ylab='Displacement',pch=19)
-legend("topright",pc=19,col=3:5,legend=3:5)
-
+legend("topright",pch=19,col=3:5,legend=c("3 Gears","4 Gears", "5 Gears"))
+legend("topright",pch=19,col=3:5,legend=paste(3:5,"Gears"))
 ```
 
 We can see that `pch` and `col` can both take vectors, allowing us to look for patterns using differences in the plotting space.
@@ -256,15 +256,20 @@ We're going to use the Framingham data for this activity (so no data cleaning th
 
 #first plot, basic scatterplot, labeled axes
 plot(dat$SYSBP,dat$DIABP,xlab='Systolic',ylab='Diastolic')
+
 #second plot, basic histogram of sysbp, but colored and labeled
 hist(dat$SYSBP,col=2,xlab='Systolic Blood Pressure',main='')
+
 #third plot, systolic boxplots by sex
 boxplot(SYSBP~SEX,data=dat,col=3:2)
+
 #fourth plot, barplot of BMIGroups
 barplot(table(dat$BMIGroups))
+
 #fifth plot - subgrouping
 ind = which(dat$BMIGroups=='Normal')
 plot(dat$SYSBP[ind],dat$DIABP[ind],xlab='SYSBP',ylab='DIABP',main='BP Correlations for people with NORMAL BMI',col=3)
+
 #sixth plot - all subgroups
 par(mfrow=c(2,2))
 levs=levels(dat$BMIGroups)
@@ -290,6 +295,7 @@ To use the functions you initiate the capture, create the plot(s), and then turn
 ```{r imageSaving}
 
 pdf("savedImages.pdf",height=5,width=8)
+par(mar=c(5,3,1,1))
 plot(mtcars$mpg,mtcars$disp)
 plot(mtcars$mpg,mtcars$disp,pch=mtcars$gear,xlab='MPG',ylab='Displacement')
 plot(mtcars$mpg,mtcars$disp,col=mtcars$gear,xlab='MPG',ylab='Displacement',pch=19)

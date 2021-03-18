@@ -1,17 +1,17 @@
 ---
 title: "R for Health Data Science"
-subtitle: "Week 03: Graphics in R"
+subtitle: "Week 04: Biostatistics Part 1"
 author: "Sam Stewart"
-date: "2021-02-26"
+date: "2021-03-12"
 output: 
-  # pdf_document:
-  #   number_sections: true
-  html_document:
+  pdf_document:
     number_sections: true
-    toc: true
-    toc_depth: 3
-    toc_float:
-      collapsed: false
+  # html_document:
+  #   number_sections: true
+  #   toc: true
+  #   toc_depth: 3
+  #   toc_float:
+  #     collapsed: false
 ---
   
 ```{r setup, include=FALSE}

@@ -1,0 +1,151 @@
+---
+title: "Week 05 - Breakout Activity"
+author: "Sam Stewart"
+date: "2021-03-19"
+output: 
+  # pdf_document:
+  #  number_sections: true
+  html_document:
+    number_sections: true
+    toc: true
+    toc_depth: 3
+    toc_float:
+      collapsed: false
+---
+  
+```{r setup, include=FALSE}
+
+library(Hmisc)
+library(kableExtra)
+library(dplyr)
+library(tidyr)
+library(epiR)
+
+#Note that I changed echo=FALSE - normally we don't want to include our code
+knitr::opts_chunk$set(tidy = TRUE, echo = FALSE, message=FALSE, warning=FALSE, fig.width=8, fig.height=5)
+
+#this is specific to my R-project code to find the data set correctly in the next block, you can probably delete it
+knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
+
+#these are table-specific options
+options(full_width = FALSE)
+options(knitr.kable.NA = '')
+
+```
+
+```{r readFram}
+
+dat = read.csv("data/framinghamFirst.csv",header=TRUE, 
+               na.strings=".",stringsAsFactors=FALSE)
+dat$BMIGroups = cut(dat$BMI,breaks=c(0,18.5,25,30,Inf),
+                    labels=c("Underweight","Normal","Overweight","Obese"))
+dat$SEX = factor(dat$SEX,levels=1:2,labels=c("Male","Female"))
+dat$DIABETES = factor(dat$DIABETES,levels=0:1,labels=c("No Diabetes","Diabetes"))
+dat$HYPERTEN = factor(dat$HYPERTEN,levels=0:1,labels=c("Normotensive","Hypertensive"))
+dat$CURSMOKE = factor(dat$CURSMOKE,levels=0:1,labels=c("Non-smoker","Smoker"))
+
+```
+
+# Introduction
+In week 4 we were presented with 4 questions (dropped the 5th for time):
+
+1. Is there a difference in glucose levels between smokers and non-smokers?
+2. Is the difference still present after controlling for sex?
+3. Is there an interaction between smoking and sex?
+4. Is there an effect of smoking on *hypertension*?
+
+*NOTE: I changed diabetes for hypertension from last week - I always forget how much lower the diabetes rate was in the 80s: [https://www.cdc.gov/diabetes/statistics/slides/long_term_trends.pdf](https://www.cdc.gov/diabetes/statistics/slides/long_term_trends.pdf).* 
+
+I'll split these into two sections, and explore the answers
+
+# Glucose and Smoking
+The primary question is if there is a difference in glucose between smokers and non-smokers.  We'll start with a tabular and graphical summary of the relationship.
+```{r glucoseBoxplot, fig.width=8,fig.height=5}
+
+par(mfrow=c(1,2))
+boxplot(GLUCOSE~CURSMOKE,data=dat,col=c(3,2),xlab='',ylab='Glucose')
+boxplot(GLUCOSE~CURSMOKE,data=dat,col=c(3,2),xlab='',ylab='Glucose (truncated)',ylim=c(40,150))
+
+```
+
+The boxplots show a minimal difference and perhaps some skewness, let's look at a tabular summary.
+
+```{r glucoseTable}
+
+#This is the equivalent of the STATA command
+#by SEX: codebook GLUCOSE
+
+temp0 = psych::describe(dat$GLUCOSE,quant = c(0.25,0.75))
+temp1 = psych::describe(dat$GLUCOSE[which(dat$CURSMOKE=='Smoker')],quant = c(0.25,0.75))
+temp2 = psych::describe(dat$GLUCOSE[which(dat$CURSMOKE=='Non-smoker')],quant = c(0.25,0.75))
+#I have to wrap the rbind in an as.data.frame to make the subsetting command work
+tab.sex01 = as.data.frame(rbind(
+  ALL=temp0,
+  Smoker=temp1,
+  `Non-smoker`=temp2
+))
+tab.gluc.smoke = tab.sex01[,c('n','mean','sd','min','Q0.25','median','Q0.75','max')]
+
+kable_styling(kable(tab.gluc.smoke,digits=2,caption='Glucose summarized across smoking status (manually, using describe)'))
+
+#there's a better way using a library called table1
+library(table1)
+table1(~GLUCOSE|CURSMOKE,data=dat,caption='Glucose levels, overall and stratified by smoking status (automatically, using table1)')
+```
+
+```{r glucoseTest}
+#the actual test would be a good idea
+test.gluc.smoke = t.test(GLUCOSE~CURSMOKE,data=dat)
+test.gluc.smoke
+```
+
+The difference looks statistically significant, though whether it is clinically meaningful is a different discussion.
+
+**OBJECTIVE 1** Summarize the t-test in a meaningful way, either with a table or in-line.
+
+## Investigating relationship to SEX
+We want to investigate the effect of sex on this relationship, first as a controlling factor and second as an effect modifier.
+
+The table below presents the stratified effects, and probably suggests a lack of effect modification, but we'll pursue both models regardless.
+```{r gluc.sex.table}
+#table 1 can be useful as a first step here
+table1(~GLUCOSE|SEX+CURSMOKE,data=dat,caption='Glucose levels, stratified by Sex and Smoking Status')
+```
+
+For the regression models we'll build three - one with smoking, one with smoking and sex, one with their interaction also included.
+```{r gluc.sex.models}
+#obviously the regression model is most appropriate
+mod01 = lm(GLUCOSE~CURSMOKE,data=dat)
+summary(mod01)
+mod02 = lm(GLUCOSE~CURSMOKE+SEX,data=dat)
+summary(mod02)
+mod03 = lm(GLUCOSE~CURSMOKE*SEX,data=dat)
+summary(mod03)
+
+```
+
+The effect of sex, both as a controlling and effect-modifying variable, is minimal.  
+
+**OBJECTIVE 2** Summarize the regression models in a more effective way.  If you're feeling really ambitious, look up the `stargazer` library for an effective way to summarize multiple models at once.
+
+# Hypertension and Smoking
+We'll start with a simple graphical and numeric summary of the relationship
+
+```{r hyper.smoke,fig.height=5,fig.width=5}
+
+tab.hyper.smoke = table(dat$CURSMOKE,dat$HYPERTEN)[2:1,2:1]
+barplot(tab.hyper.smoke,beside=TRUE,legend=rev(levels(dat$CURSMOKE)),col=c(2,4))
+
+table1(~HYPERTEN|CURSMOKE,data=dat)
+```
+The table suggests a pattern - to test and measure the effect we'll use the RR, OR and RD, as reported in the output below.
+
+```{r hyper.smoke.test}
+#getting the effect measures
+test.hyper.smoke = epi.2by2(tab.hyper.smoke)
+test.hyper.smoke
+```
+
+All three effects are significant, suggesting a protective effect of smoking on hypertension. 
+
+**OBJECTIVE 3** Report the effect measures (RR, OR, RD) with their CIs in an effective way.

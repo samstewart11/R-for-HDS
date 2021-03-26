@@ -1,0 +1,287 @@
+---
+title: "R for Health Data Science"
+subtitle: "Week 06: Tidyverse and Pipes"
+author: "Sam Stewart"
+date: "2021-03-26"
+output: 
+  pdf_document:
+   number_sections: true
+  html_document:
+    number_sections: true
+    toc: true
+    toc_depth: 3
+    toc_float:
+      collapsed: false
+    # theme: cosmo
+    # highlight: espresso
+---
+  
+```{r setup, include=FALSE}
+
+knitr::opts_chunk$set(tidy = TRUE, echo = TRUE, message=FALSE, warning=FALSE, fig.width=8, fig.height=5)
+
+#This option should force knitr to use the project workng directory
+knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
+
+options(full_width = FALSE)
+options(knitr.kable.NA = '')
+
+```
+
+```{r readFram}
+library(Hmisc)
+library(kableExtra)
+library(tidyverse)
+library(ggplot2)
+
+dat = read.csv("data/framinghamFirst.csv",header=TRUE, 
+               na.strings=".",stringsAsFactors=FALSE)
+dat$BMIGroups = cut(dat$BMI,breaks=c(0,18.5,25,30,Inf),
+                    labels=c("Underweight","Normal","Overweight","Obese"))
+dat$SEX = factor(dat$SEX,levels=1:2,labels=c("Male","Female"))
+dat$DIABETES = factor(dat$DIABETES,levels=0:1,labels=c("No Diabetes","Diabetes"))
+dat$HYPERTEN = factor(dat$HYPERTEN,levels=0:1,labels=c("Normotensive","Hypertensive"))
+
+```
+
+Today we're going to be learning about the *tidyverse*, a set of libraries developed by Wickham and colleagues at RStudio.  There are two major components that we'll focus on. This week we'll look at data manipulation with pipes (`%>%`), and next week we'll look at data visualizations with the `ggplot2` library.
+
+We'll be borrowing heavily from the [R4DS](https://r4ds.had.co.nz/index.html) textbook - if you like learning from print sources there are few R-related textbooks more useful that this one.  We'll be focusing on Chapters 5 and 18 this week, while chapter 3 will be the focus next week.
+
+# `dplyr` and data manipulation
+The `dplyr` library (pronounced either *dip-ler* or *d-plier*) is the basis for data manipulation within the tidyverse, and is dependent on the pipe operator, `%>%`. Pipes work by passing the results of a function to the first argument in another function.  The following two lines produce the same results
+
+```{r pipe01}
+
+table(dat$SEX,dat$HYPERTEN)
+dat$SEX %>% table(dat$HYPERTEN)
+
+```
+
+In the back end R takes a command like `x %>% table(y)` and turns it into `table(x,y)`.  Multiple pipes just continue the pattern, so that `x %>% f(y) %>% g(z,arg1,arg2,...)` becomes `f(x,y) %>% g(z,arg1,arg2)` and then finally `g(f(x,y),z,arg1,arg2)`.
+
+While pipes seem like a neat trick, their true power is unlocked by the other functions in the `dplyr` library that are designed to work with them.  The functions in this library all take a dataset as the first argument, then use the following arguments to change the dataset.  This changed dataset is then passed to the next function.  This allows you to use functions sequentially and read them in the order they execute: take `x`, apply function `f(y)`, then apply function `g(z,arg1,arg2,...)`.  See [Chapter 18](https://r4ds.had.co.nz/pipes.html) for a good justification of why pipes make code easier to read.
+
+The result is a vertical arrangement of functions that are much easier to read than traditional R, and require *way* fewer `$`.  The functions we'll start with are
+
+1.  `filter()` to select specific rows
+2.  `select()` to pick specific columns (i.e variables)
+3.  `mutate()` to create new variables
+4.  `summarise()` and `group_by()` to create numeric summaries
+
+There are plenty of others, but once you get the hang of it you'll learn how to Google the answer to the others: "dyplr how do I ...".
+
+All of the functions (the tidyverse calls them *"verbs"*) work the same way
+
+* The first argument is a data frame
+* the subsequent arguments are what to do with the data frame
+* the function returns a new data frame
+
+The only other difference is that the data isn't a data frame, it's a **tibble**.
+
+## tibbles
+Tibbles are a new kind of data frame specific to the tidyverse.  They are almost identical to data frames, with a couple of notable differences (see the command `vignette("tibble")` for a complete list).
+
+* They print a restricted number of rows and columns
+* They don't partially match to variables names
+* They don't change column names or change variables types
+* They *try* not to support row names
+
+```{r tibble01}
+tibble(dat)
+dat = tibble(dat)
+```
+
+
+## filter()
+`filter()` will let you subset a dataset based on values of other variables.  As with all the functions here the first argument is the dataset, and the subsequent arguments are "expressions", or boolean arguments, that define the new dataset
+
+```{r filter01}
+#the full dataset
+dat
+#just the men
+filter(dat,SEX=='Male')
+#just the women, but using a pipe
+dat %>% filter(SEX=='Female')
+#Just the obese men
+dat %>%
+  filter(SEX=='Male',
+         BMIGroups=='Obese')
+#Just the overweight or obese people
+dat %>%
+  filter(BMIGroups=="Obese" | BMIGroups=="Overweight")
+```
+
+Note that filter only shows rows where the condition is TRUE, so any missing values in the condition column will also be dropped.
+
+## select()
+`select()` will select specific columns of your dataset (where `filter()` selected rows).  The general use is to reduce a dataset to just the needed variables, listed separated by commas after the first argument (which is again the dataset).
+
+```{r select01}
+
+#pick three variables
+select(dat,SEX,BMIGroups,CURSMOKE)
+```
+
+There are a couple of helper functions for complex datasets (`starts_with()`, `ends_with()`, `contains()`, `matches()`, ...), see `help(select)` for more details.
+
+## mutate()
+`mutate()` is used for creating new variables.  The equations are the same data-processing equations as before, but the advantage is that there are no more `$`, making it much easier to read.
+
+```{r mutate01}
+
+
+dat %>% 
+  select(SEX,AGE,BMI,DEATH)%>%#not necessary, for demo purposes
+  mutate(DEATH=factor(DEATH,levels=0:1,labels=c("Dead","Alive")),
+         BMIGroups = cut(BMI,breaks=c(0,18.5,25,30,Inf)),
+         BMINormal = (BMIGroups=='(18.5,25]')
+         )
+
+```
+
+`mutate()` can either create new variables (`BMIGroups`) or overwrite existing ones (`DEATH`).  As you can see in the example the function executes sequentially, so we can create a variable and then use it right away to create another new variable (`BMINormal`).
+
+## summarise()
+
+`summarise()` reduces the dataset to a single row, which isn't that useful until you pair it with `group_by()`.
+
+```{r summarise01}
+
+dat %>%
+  summarise(averageAge = mean(AGE,na.rm=TRUE))
+
+dat %>%
+  summarise(
+    n = n(),
+    mean = mean(BMI,na.rm=TRUE),
+    sd = sd(BMI,na.rm=TRUE)
+    )
+```
+I know that BMI has some missing values, but the `n()` function can't account for that, so we should address them before the summarise function, which we'll do with `filter()`.
+
+```{r summarise02}
+dat %>%
+  filter(!is.na(BMI))%>%
+  summarise(
+    n = n(),
+    mean = mean(BMI,na.rm=TRUE),
+    sd = sd(BMI,na.rm=TRUE)
+    )
+```
+To get some really meaningful results we'll use `group_by()` to stratify the results, first by SEX, then SEX and smoking status
+```{r summarise03}
+dat %>%
+  filter(!is.na(BMI))%>%
+  group_by(SEX)%>%
+  summarise(
+    n = n(),
+    mean = mean(BMI,na.rm=TRUE),
+    sd = sd(BMI,na.rm=TRUE)
+    ) 
+
+dat %>%
+  filter(!is.na(BMI))%>%
+  group_by(SEX,CURSMOKE)%>%
+  summarise(
+    n = n(),
+    mean = mean(BMI,na.rm=TRUE),
+    sd = sd(BMI,na.rm=TRUE)
+    ) 
+```
+Note that we haven't yet factored smoking, so we'll do it here with `mutate()`
+
+```{r summarise04}
+dat %>%
+  filter(!is.na(BMI))%>%
+  mutate(CURSMOKE=factor(CURSMOKE,levels=0:1,labels=c("Non-smoker","Smoker")))%>%
+  group_by(SEX,CURSMOKE)%>%
+  summarise(
+    n = n(),
+    mean = mean(BMI,na.rm=TRUE),
+    sd = sd(BMI,na.rm=TRUE)
+    ) 
+```
+Finally, we'll go back to the kable library last week to make it pretty.
+```{r kable01}
+dat %>%
+  filter(!is.na(BMI))%>%
+  mutate(CURSMOKE=factor(CURSMOKE,levels=0:1,labels=c("Non-smoker","Smoker")))%>%
+  group_by(SEX,CURSMOKE)%>%
+  summarise(
+    n = n(),
+    mean = mean(BMI,na.rm=TRUE),
+    sd = sd(BMI,na.rm=TRUE)
+    ) %>%
+  kable(digits=2) %>% kable_styling()%>%
+  kable_paper("striped",full_width=FALSE)%>%
+  row_spec(0,bold=T,background='black',color='white')
+
+```
+
+This kind of data-transformation for reporting is where `dplyr` can really shine - I find that I still do my data cleaning as individual commands, since doing it all as a single command with `dplyr` can make debugging more difficult, but I find table prep is much easier with `dplyr`.
+
+# Breakout Activity
+We're going to go back to our week 2 dataset to practice with pipes.
+
+In week 2 we took data from two datasets, `bpSubjects.csv` and `bpMeasures.csv`. The first records the age, sex and enrollment date for 100 subjects in a study to track the systolic blood pressures of LTC residents over 6 months. The second dataset records the BP measurements taken at 4 time intervals, roughly 1, 2, 3 and 6 months after enrollment.
+
+1.  Format the variables - numbers, factors and dates
+2.  Join the two datasets into a single dataset
+3.  Transform the data into a long dataset
+    - start with a single long variable recording the BP values
+    - as a second step, make it a long dataset that records both the BP and the date for each measurement
+
+The code below has the non-piped solution.
+```{r originalCode}
+dat01 = read.csv("data/bpSubjects.csv")
+dat02 = read.csv("data/bpMeasures.csv",na.strings='.')
+
+####fixing dat01
+#dates
+dat01$enrollDate = as.Date(dat01$enrollDate)
+#sex
+dat01$sex = factor(toupper(dat01$sex),
+             levels=c("M","F"),
+             labels=c("Male","Female"))
+
+###fixing dat02
+#dates
+dat02$sampleDate01 = as.Date(dat02$sampleDate01)
+dat02$sampleDate02 = as.Date(dat02$sampleDate02)
+dat02$sampleDate03 = as.Date(dat02$sampleDate03)
+dat02$sampleDate04 = as.Date(dat02$sampleDate04)
+#fixing BP
+dat02$sysbp02 = as.numeric(dat02$sysbp02)
+
+#I'll use left_join
+dat.all = left_join(dat01, dat02, all.x = TRUE, all.y = FALSE)
+
+library(reshape2)
+dat.bp = melt(dat.all,
+              id.vars=c("id","sex","age"),
+              measure.vars=c("sysbp01","sysbp02","sysbp03","sysbp04"),
+              variable.name='index',
+              value.name ='BP')
+
+dat.dates = melt(dat.all,
+                 id.vars=c("id","sex","age"),
+                 measure.vars=sprintf("sampleDate%02d",1:4),
+                 variable.name='index',
+                 value.name='date')
+
+#once each long dataset is completed we can merge them
+#merge would work as well
+dat.long = merge(dat.dates,dat.bp,all=TRUE)
+```
+For the piped solution a couple of hints 
+
+* it needs at least two commands - it can't work as a single set of pipes
+  - format `dat01` using pipes, then format `dat02`, then join them
+* for joining consider `merge()`, `left_join()` and/or `right_join()`
+* when formatting, be careful with nested functions (i.e `toupper()`), they don't work well with `mutate()`
+* for the making it longer there's a function called `pivot_longer()` that might be helpful
+
+```{r pipedSolution}
+
+```

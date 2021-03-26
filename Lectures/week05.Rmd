@@ -4,8 +4,8 @@ subtitle: "Week 05: Functional Reporting in R"
 author: "Sam Stewart"
 date: "2021-03-19"
 output: 
-  pdf_document:
-   number_sections: true
+  # pdf_document:
+  #  number_sections: true
   html_document:
     number_sections: true
     toc: true

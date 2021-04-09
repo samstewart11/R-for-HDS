@@ -68,9 +68,13 @@ t.test(SBP.sex$Male,SBP.sex$Female)
 ## ----tapply.ex------------------------------------------------------------------------
 
 #get the average SYSBP for each value of SEX
-tapply(dat$SYSBP,dat$SEX,mean)
+tapply(dat$SYSBP,dat$SEX,mean,simplify=TRUE)
+
+tapply(dat$SYSBP,dat$SEX,function(x){
+  table(x>140)
+})
 #get the average for each BMI group
-tapply(dat$SYSBP,dat$BMIGroups,mean)
+BMIAverages = tapply(dat$SYSBP,dat$BMIGroups,mean,simplify=TRUE)
 #the functions don't need to be numeric
 par(mfrow=c(2,2))
 temp = tapply(dat$SYSBP,dat$BMIGroups,hist)#this doesn't work well for titles
@@ -117,7 +121,7 @@ tab01 = tab01[,2:1]#flip the columns
 tab01
 epi.2by2(tab01)
 
-
+tab02 = table(dat$SEX,dat$BMIGroups)
 
 ## ----lm01-----------------------------------------------------------------------------
 
@@ -168,10 +172,12 @@ confint(mod.lm02)
 ## ----postHoc01------------------------------------------------------------------------
 
 mod.lm03 = lm(SYSBP~BMIGroups,data=dat)
+mod.lm03a = glm(SYSBP~BMIGroups,data=dat)
 #first convert to aov
 aov03 = aov(mod.lm03)
 #TukeyHSD performs the post-hoc CIs using the Tukey Honest Significant Difference
 TukeyHSD(aov03)
+TukeyHSD(aov(mod.lm03))
 
 
 
@@ -211,9 +217,10 @@ coef = mod.log03$coefficients
 #get the CIs on the coefficients
 ci = confint(mod.log03)
 #tie them together in a table
-out = cbind(OR=coef,ci)
+out = cbind(coef,ci)
 #exponentiate them to get the ORs
 out01 = exp(out)
+colnames(out01) = c("OR","LCL","UCL")
 
 #or in one line
 out02 = exp(cbind(OR=mod.log03$coefficients,confint(mod.log03)))
@@ -228,7 +235,9 @@ getOR = function(mod){
 }
 out03 = getOR(mod.log03)
 
-
+functionName = function(argument1, argument2, argument3){
+  #CODE THAT WORKS ON ARUGMENTS
+}
 
 ## ----modelOR.code---------------------------------------------------------------------
 

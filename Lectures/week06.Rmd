@@ -108,7 +108,7 @@ dat %>%
   filter(SEX=='Male',
          BMIGroups=='Obese')
 #Just the overweight or obese people
-dat %>%
+dat.over = dat %>%
   filter(BMIGroups=="Obese" | BMIGroups=="Overweight")
 ```
 

@@ -97,9 +97,19 @@ table1(~GLUCOSE|CURSMOKE,data=dat,caption='Glucose levels, overall and stratifie
 #the actual test would be a good idea
 test.gluc.smoke = t.test(GLUCOSE~CURSMOKE,data=dat)
 test.gluc.smoke
+out = c(
+  test.gluc.smoke$estimate,
+  diff=-1*diff(test.gluc.smoke$estimate),
+  test.gluc.smoke$conf.int,
+  pValue=test.gluc.smoke$p.value
+)
+names(out) = c("Non-smoker","Smoker","Diff","LCL","UCL","p-value")
+kable_styling(kable(t(out),digits=c(1,1,2,1,1,5)))
 ```
 
 The difference looks statistically significant, though whether it is clinically meaningful is a different discussion.
+
+The difference in glucose levels was `r round(-1*diff(test.gluc.smoke$estimate),2)`, (95% CI: [`r round(test.gluc.smoke$conf.int,2)`], p-val < 0.0001).
 
 **OBJECTIVE 1** Summarize the t-test in a meaningful way, either with a table or in-line.
 
@@ -107,6 +117,7 @@ The difference looks statistically significant, though whether it is clinically 
 We want to investigate the effect of sex on this relationship, first as a controlling factor and second as an effect modifier.
 
 The table below presents the stratified effects, and probably suggests a lack of effect modification, but we'll pursue both models regardless.
+
 ```{r gluc.sex.table}
 #table 1 can be useful as a first step here
 table1(~GLUCOSE|SEX+CURSMOKE,data=dat,caption='Glucose levels, stratified by Sex and Smoking Status')
@@ -121,6 +132,16 @@ mod02 = lm(GLUCOSE~CURSMOKE+SEX,data=dat)
 summary(mod02)
 mod03 = lm(GLUCOSE~CURSMOKE*SEX,data=dat)
 summary(mod03)
+
+out.lm = rbind(
+  summary(mod01)$coef,
+  summary(mod02)$coef,
+  summary(mod03)$coef
+)
+kable(out.lm,digits=c(2,1,1,5)) %>% kable_styling() %>%
+  pack_rows("Raw",1,2) %>%
+  pack_rows("Controlled",3,5) %>%
+  pack_rows("Interaction",6,9)
 
 ```
 

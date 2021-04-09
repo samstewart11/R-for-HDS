@@ -78,11 +78,17 @@ dat %>%
   summarise(averageAge = mean(AGE,na.rm=TRUE))
 
 dat %>%
+  filter(!is.na(BMI))%>%
+  mutate(CURSMOKE=factor(CURSMOKE,levels=0:1,labels=c("Non-smoker","Smoker")))%>%
+  group_by(SEX,CURSMOKE)%>%
   summarise(
     n = n(),
-    mean = mean(BMI,na.rm=TRUE),
-    sd = sd(BMI,na.rm=TRUE)
-    )
+    mean = mean(BMI),
+    sd = sd(BMI),
+    median = median(BMI)
+    ) %>% 
+  kable() %>% kable_styling() %>%
+  row_spec(0,background='cyan',color='magenta')
 
 
 ## ----summarise02---------------------------------------------------------------------------
@@ -186,5 +192,19 @@ dat.long = merge(dat.dates,dat.bp,all=TRUE)
 
 
 ## ----pipedSolution-------------------------------------------------------------------------
+bp.long = d.all %>% 
+  select(-starts_with("sampleDate"))%>%
+  pivot_longer(cols=starts_with("sysbp"))%>%
+  rename(BP=value,index=name)%>%
+  mutate(index=gsub("sysbp","",index))
 
+date.long = d.all %>% 
+  select(-starts_with("sysbp"))%>%
+  pivot_longer(cols=starts_with("sampleDate"))%>%
+  rename(sampleDate=value,index=name)%>%
+  mutate(index=gsub("sampleDate","",index))
+
+dat.long = bp.long %>% 
+  merge(date.long) %>%
+  filter(!is.na(BP))
 

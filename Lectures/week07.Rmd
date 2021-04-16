@@ -243,7 +243,7 @@ The default behaviour is stacked histograms, which I don't find useful - we can 
 
 dat %>%
 ggplot(aes(x=BMI,group=SEX,fill=SEX))+
-  geom_histogram(position='identity',alpha=0.5)
+  geom_histogram(position='identity')
 
 ```
 

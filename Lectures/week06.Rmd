@@ -204,7 +204,7 @@ dat %>%
 ```
 Finally, we'll go back to the kable library last week to make it pretty.
 ```{r kable01}
-dat %>%
+dat %>% tibble() %>%
   filter(!is.na(BMI))%>%
   mutate(CURSMOKE=factor(CURSMOKE,levels=0:1,labels=c("Non-smoker","Smoker")))%>%
   group_by(SEX,CURSMOKE)%>%
@@ -216,6 +216,7 @@ dat %>%
   kable(digits=2) %>% kable_styling()%>%
   kable_paper("striped",full_width=FALSE)%>%
   row_spec(0,bold=T,background='black',color='white')
+
 
 ```
 

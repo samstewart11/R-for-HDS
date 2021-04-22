@@ -4,8 +4,8 @@ subtitle: "Week 09: Biostats III - GEE"
 author: "Sam Stewart"
 date: "2021-04-23"
 output: 
-  pdf_document:
-   number_sections: true
+  # pdf_document:
+  #  number_sections: true
   html_document:
     number_sections: true
     toc: true
@@ -28,7 +28,7 @@ options(knitr.kable.NA = '')
 
 ```
 
-```{r readFram}
+```{r readData}
 library(Hmisc)
 library(kableExtra)
 library(tidyverse)
@@ -66,12 +66,15 @@ The data are from an interactive multimedia program called "Beat the Blues", a C
 #make it a tibble for ease of printing, and add an ID column
 BtheB = BtheB %>% tibble() %>%
   mutate(ID = 1:n()) %>%
-  relocate(ID)
+  relocate(ID) 
+
 #make a long version of the bdi variables
 BtheB.long = 
 BtheB %>%
-  pivot_longer(cols=-c(ID, drug,length,treatment),names_to='time',values_to='beck') %>%
-  mutate(time=factor(gsub("bdi.","",time),levels=c("pre","2m","4m","6m","8m")))
+  pivot_longer(cols=-c(ID, drug,length,treatment),
+               names_to='time',values_to='beck') %>%
+  mutate(time=factor(gsub("bdi.","",time),
+                     levels=c("pre","2m","4m","6m","8m")))
 
 #some functions use labels for better printing
 label(BtheB$drug) = 'On depression medications'

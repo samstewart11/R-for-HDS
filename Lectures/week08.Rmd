@@ -220,6 +220,11 @@ dat.imm %>%
 #  geom_point(aes(colour=homework.fact))+
   geom_jitter(aes(colour=homework.fact),width=0.2,height=0)+
   geom_smooth()
+
+dat.imm %>%
+  ggplot(aes(x=homework,y=math))+
+  geom_jitter(width=0.2,height=0)+
+  geom_smooth()
   
 dat.imm %>%
   ggplot(aes(x=math))+

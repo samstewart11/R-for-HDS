@@ -12,7 +12,6 @@ Each session will be 90 minutes (Fridays, 9:30-11:00).  We will start with 45 mi
 5. Reporting
 6. Tidyverse - dplyr
 7. Tidyverse - ggplot2
-6. Biostats 2 (glm, gee, hierarchical models, survey weights, ...)
-7. Web Scraping
-8. Data Mining (focus on classification)
-9. ? 
+8. Biostats 2 - survival and mixed effects
+9. Biostats 3 - gee
+10. Non-standard data structures - XML and JSON

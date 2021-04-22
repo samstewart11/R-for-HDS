@@ -1,0 +1,243 @@
+---
+title: "R for Health Data Science"
+subtitle: "Week 09: Biostats III - GEE"
+author: "Sam Stewart"
+date: "2021-04-23"
+output: 
+  pdf_document:
+   number_sections: true
+  html_document:
+    number_sections: true
+    toc: true
+    toc_depth: 3
+    toc_float:
+      collapsed: false
+    # theme: cosmo
+    # highlight: espresso
+---
+  
+```{r setup, include=FALSE}
+
+knitr::opts_chunk$set(tidy = TRUE, echo = TRUE, message=FALSE, warning=FALSE, fig.width=8, fig.height=5)
+
+#This option should force knitr to use the project workng directory
+knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
+
+options(full_width = FALSE)
+options(knitr.kable.NA = '')
+
+```
+
+```{r readFram}
+library(Hmisc)
+library(kableExtra)
+library(tidyverse)
+library(ggplot2)
+library(boomer)
+library(table1)
+library(HSAUR)
+library(ggpubr)
+library(gee)
+
+#GEE example data - if you don't want to load a package you can load a
+#dataset from it like this (though you'll still need to download the package)
+data("BtheB", package = "HSAUR")
+```
+
+We're going to wrap up Biostats methods this week with an investigation of Generalized Estimating Equations (GEE). Note that I have added two old lectures to the course site (both Blackboard and GitHub) that cover the modeling methods we've discussed.  These are from a summer tutorial session I ran at CH&E a couple of years ago, so they focus on STATA more than R, but they have *some* R code in them, and the methods are useful for us.  The names are self-explanatory:
+
+1. LinearLogisticSurvivalPoissonRegression.pdf
+2. GEEAndImputation.pdf
+
+# Generalized Estimating Equations
+For analyzing multiple values from a subject over time
+
+* Measuring weight every month for 12 months
+* A patient's med count exery time they visit the ER
+
+The challenge is the issue of *dependence* that arises with sequential observations - we need methods to account for that.  Note that the mixed effects models we learned last week (and the `lmer()` and `glmer()` functions from `lme4`) can fit this data as well - I prefer the flexibility of GEE, but each have their advantages.
+
+I'm not going to go too deep into it, but in building GEE models you need to specify the *covariance structure* - that is, how the observations within a group are correlated with one another. We'll see through the example below.
+
+The data are from an interactive multimedia program called "Beat the Blues", a CBT delivered to depressed patients online.  Patients were randomly assigned to BtB or Treatment as Usual (TAU).  The outcome is the "Beck Depression Inventory" with predictors of centre, treatment, duration of depression and medication use.
+
+```{r summaryData}
+
+#make it a tibble for ease of printing, and add an ID column
+BtheB = BtheB %>% tibble() %>%
+  mutate(ID = 1:n()) %>%
+  relocate(ID)
+#make a long version of the bdi variables
+BtheB.long = 
+BtheB %>%
+  pivot_longer(cols=-c(ID, drug,length,treatment),names_to='time',values_to='beck') %>%
+  mutate(time=factor(gsub("bdi.","",time),levels=c("pre","2m","4m","6m","8m")))
+
+#some functions use labels for better printing
+label(BtheB$drug) = 'On depression medications'
+label(BtheB$length) = 'Duration of depressive symptoms'
+
+#table1 will give us a quick summary
+table1(~.|treatment,data=BtheB)
+
+
+```
+
+## Longitudinal Plots
+Imbalance in drug-use between groups, many missing values in follow-up.  Let's try to plot the trajectories (this is a fun one to build in parts with `ggplot()`)
+
+```{r trajectories,fig.height=6,fig.width=7}
+
+p1 = BtheB.long %>%
+  ggplot(aes(x=time,y=beck,color=treatment))+
+  geom_point()+
+  geom_line(aes(group=ID))
+  
+p2 = BtheB.long %>%
+  ggplot(aes(x=time,y=beck))+
+  geom_point(colour=grey(0.75))+
+  geom_line(aes(group=ID),colour=grey(0.75))+
+  geom_smooth(aes(colour=treatment,group=treatment),se=FALSE)+
+  theme_classic()
+#this function from the ggpubr library is useful for combining ggplots
+ggarrange(p1,p2,nrow=2)
+```
+
+Obviously a lot of variability in the trajectories, but two things of note are that the TAU subjects seem to do worse (with Beck low == good) but that they also start higher, and that the baseline Beck scores seem to vary significantly between groups.
+
+We're going to have to incorporate the baseline Beck score into the model, and we'll experiment with a couple of different correlational structures.
+
+
+```{r gee.data}
+
+#I'm going to move bdi.pre from an outcome measure to a predictor
+BtheB.long.model = 
+BtheB %>%
+  pivot_longer(cols=-c(ID, drug,length,treatment,bdi.pre),
+               names_to='time',values_to='bdi') %>%
+  mutate(time=factor(gsub("bdi.","",time),levels=c("2m","4m","6m","8m")))%>%
+  arrange(ID,time)%>%
+  drop_na()
+
+BtheB.long.model
+```
+
+## Fitting GEE Models
+```
+gee(formula, id,
+    data, subset, na.action,
+    R = NULL, b = NULL,
+    tol = 0.001, maxiter = 25,
+    family = gaussian, corstr = "independence",
+    Mv = 1, silent = TRUE, contrasts = NULL,
+    scale.fix = FALSE, scale.value = 1, v4.4compat = FALSE)
+```
+
+We use the same formula structure, but we need to set a couple of other variables.
+
+1.  `id` identifies the grouping variable - in our case that is `ID`
+2.  `corstr` defines the correlation structure
+3.  `family` defines the type of model we're fitting - you'll use `gausian` (for continuous data) and `binomial` (for logistic data) the most.
+
+```{r gee01}
+#to build a gee model we just need to specify the variable that 
+#co-ordinates the groups (ID), the family, and the correlation structure
+mod01 =  gee(bdi ~ bdi.pre + treatment + length + drug, 
+             data = BtheB.long.model, id = ID, family = gaussian, corstr = "independence")
+mod01
+summary(mod01)
+```
+
+You can see that, like before, we can get a simple and more complete summary of the model that was fit.  In this case there is no easy way to get a p-value or confidence interval, so the function below will do it for us.
+```{r gee.modelExtraction}
+#You need to get CIs and p-values yourself, so I built a function to do
+#it for me
+mySummary = function(mod){
+  sum = summary(mod)
+  coef = sum$coefficients[,c(1,4,5)] %>% 
+    as.data.frame() %>% rownames_to_column() %>% tibble() %>%
+    rename(variable = rowname,
+           se = `Robust S.E.`,
+           z = `Robust z`)%>%
+    mutate(LCL = Estimate-qnorm(0.975)*se,
+           UCL = Estimate+qnorm(0.975)*se,
+           pValue=round(2*(1-pnorm(abs(z))),4)
+    ) %>%
+    relocate(variable,Estimate,LCL,UCL)
+  coef
+}
+
+mySummary(mod01) %>%
+  kable(digits=c(0,3,2,2,2,2,4)) %>% kable_styling()
+```
+This is the result of the GEE model, but I'll hold off on interpreting it because it was built on an independence correlation structure, which is rarely correct.  Let's look at the exchangeable, unstructured and AR-M models.
+
+```{r gee02}
+
+#let's look at the other models
+mod02 =  gee(bdi ~ bdi.pre + treatment + length + drug, 
+             data = BtheB.long.model, id = ID, family = gaussian, corstr = "exchangeable")
+mod03 =  gee(bdi ~ bdi.pre + treatment + length + drug, 
+             data = BtheB.long.model, id = ID, family = gaussian, corstr = "unstructured")
+```
+
+For some reason the `AR-M` correlation structure in R breaks when we have people that have a single observation - that shouldn't happen, but we're stuck with what is programmed.  The code below drops the subjects with <2 observations, then fits an AR-1 correlation structure.
+```{r gee.AR1}
+#this breaks because there are people with only 1 observation
+#mod04 =  gee(bdi ~ bdi.pre + treatment + length + drug, data = BtheB.long.model, id = ID, family = gaussian, corstr = "AR-M")
+
+#drop the people with a single observation
+b2 = BtheB.long.model %>% drop_na() %>% group_by(ID) %>% filter(n()>1)
+mod04 =  gee(bdi ~ bdi.pre + treatment + length + drug, 
+             data = b2, id = ID, family = gaussian, corstr = "AR-M")
+
+#another short custom function to avoid copy+paste too much
+kableMod = function(mod,cap=''){
+  mySummary(mod) %>%
+    kable(digits=c(0,3,2,2,2,2,4),caption=cap) %>% kable_styling()
+}
+
+kableMod(mod02,cap='Exchangeable')
+kableMod(mod03,cap='Unstructured')
+kableMod(mod04,cap='AR-M*')
+
+```
+
+I'm always biased by the AR-M approach to temporal analysis, but I don't like that I had to reduce the dataset in R, so I'd probably go with the unstructured correlation matrix - you sacrifice the most degrees of freedom with that approach, but I think it's better.
+
+The variability in results based on correlation structure changes reflects a potential sample size issue, which is also present in the width of the CIs.
+
+
+```{r gee03}
+#let's look at the four correlation matrices
+cor01 = mod01$working.correlation
+cor02 = mod02$working.correlation
+cor03 = mod03$working.correlation
+cor04 = mod04$working.correlation
+
+cor01 %>% kable(digits=4,caption='Independent') %>% kable_styling()
+cor02 %>% kable(digits=4,caption='Exchangable') %>% kable_styling()
+cor03 %>% kable(digits=4,caption='Unstructured') %>% kable_styling()
+cor04 %>% kable(digits=4,caption='AR-M') %>% kable_styling()
+
+```
+
+# Breakout Session
+We'll use a second dataset from the same library called `HSAUR::respiratory`, from a multi-centre study of some treatment (details are scarce).
+
+  * 111 patients (54 on treatment).
+  * baseline + 4 follow-ups
+  * outcome: binary, resp status as poor or good
+  * predictors: centre, treatment, gender, age
+  
+```{r breakout}
+
+data(respiratory)
+
+```
+
+Tasks for you with this dataset
+
+1.  Create a summary table, similar to our `table1` command above *(hint: you'll need to use `pivot_wider()` to get the data in a one-row-per-patient format)*
+2.  Summarize the data graphically - I think there is an interesting line plot and barplot, but anything that communicates the results is worthwhile
+3.  Fit a GEE model, and pick an appropriate correlation structure

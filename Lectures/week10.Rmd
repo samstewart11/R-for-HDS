@@ -1,0 +1,292 @@
+---
+title: "R for Health Data Science"
+subtitle: "Week 10: Intro to Machine Learning - Classification Trees"
+author: "Sam Stewart"
+date: "2021-05-07"
+output: 
+  # pdf_document:
+  # number_sections: true
+  html_document:
+    number_sections: true
+    toc: true
+    toc_depth: 3
+    toc_float:
+      collapsed: false
+    # theme: cosmo
+    # highlight: espresso
+---
+  
+```{r setup, include=FALSE}
+
+knitr::opts_chunk$set(tidy = TRUE, echo = TRUE, message=FALSE, warning=FALSE, fig.width=8, fig.height=5)
+
+#This option should force knitr to use the project workng directory
+knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
+
+options(full_width = FALSE)
+options(knitr.kable.NA = '')
+
+```
+
+```{r readData}
+library(Hmisc)
+library(kableExtra)
+library(tidyverse)
+library(ggplot2)
+library(boomer)
+library(XML)
+library(car)
+library(rpart)
+library(rattle)
+library(pROC)
+
+#lot's of ML algorithms have randomness, so it's good practice to 
+#set the seed at the beginning of your work so it will produce consistent
+#results
+set.seed(11)
+
+dat = read.csv("data/brfss2013-Connecticut.csv")
+
+#variables under study
+vars = c('bphigh4','cvdinfr4','cvdcrhd4','cvdstrk3','asthma3','chcscncr','chcocncr',
+         'chccopd1','havarth3','addepev2','chckidny','diabete3','drvisits')
+
+dat %>% tibble %>%
+  select(vars)
+
+#dat02 is a new version of the dataset
+dat02 = data.frame(ID=rownames(dat))[,-1]
+
+#car::recode is useful for collapsing levels in a factor
+#we need the car:: part because dplyr also has a recode function, but it's mor verbose
+dat02$bphigh = car::recode(dat$bphigh4, recodes="1=1;2:4=0;else=NA")
+dat02$ha = car::recode(dat$cvdinfr4,recodes="1=1;2=0;else=NA")
+dat02$chd = car::recode(dat$cvdcrhd4,recodes="1=1;2=0;else=NA")
+dat02$stroke = car::recode(dat$cvdstrk3,recodes="1=1;2=0;else=NA")
+dat02$asthma = car::recode(dat$asthma3,recodes="1=1;2=0;else=NA")
+dat02$skinCa = car::recode(dat$chcscncr,recodes="1=1;2=0;else=NA")
+dat02$otherCa = car::recode(dat$chcocncr,recodes="1=1;2=0;else=NA")
+dat02$copd = car::recode(dat$chccopd1,recodes="1=1;2=0;else=NA")
+dat02$arthritis = car::recode(dat$havarth3,recodes="1=1;2=0;else=NA")
+dat02$depression = car::recode(dat$addepev2,recodes="1=1;2=0;else=NA")
+dat02$kidney = car::recode(dat$chckidny,recodes="1=1;2=0;else=NA")
+dat02$diabetes = car::recode(dat$diabete3,recodes="1=1;2:4=0;else=NA")
+#drvisits is continuous so it doesn't need to be recoded
+dat02$drvisits = dat$drvisits
+dat02$drvisits[which(dat02$drvisits==88)] = 0
+dat02$drvisits[which(dat02$drvisits>76)] = NA
+
+#converting to factors in a new dataset
+dat03 = do.call(cbind.data.frame,lapply(dat02,factor,levels=1:0,labels=c("Yes","No")))
+dat03$drvisits = dat02$drvisits
+
+#dropping missing values from each dataset
+dat03 = na.omit(dat03)
+dat02 = na.omit(dat02)
+
+#dat02 is the numeric version of the dataset, 
+#dat03 is the factor version
+
+```
+
+I've changed our plan for the last lecture - I was going to talk about XML and JSON data, but they're a bit too complex from a programming perspective to explore at this point.  If you have a need for working with XML data then let me know and I can share some sample code to get you through.
+
+Instead I want to broach the topic of Machine Learning.  R is one of the two premier languages being used in the ML world (the other major choice being Python). As a brief introduction I want to talk about how to create and share classification trees - I've included a tutorial on how classification trees work from a course on Data Mining I taught, take a look through if you're more interested.  In this tutorial we'll talk about 
+
+1. Training vs Test data
+2. Building CART
+3. Presenting CART
+4. Evaluating CART
+
+# Training and Test Data
+
+Classification is about trying to accurately predict an outcome from a set of predictors. Unlike our regression methods, in classification we're primarily interested in the accuracy of the prediction - in statistics we tend to be more focused on the *mechanism* of prediction, or the regression coefficients.
+
+In order to have an unbiased evaluation of the model we should evaluate it on data that it was not trained on - evaluating the quality of a prediction based on the data it was trained on would result in *over-fitting*, or a model that is very good for that specific data and very poor outside of it.
+
+There are many complex methods of creating a training/test split (cross-validation, bootstrapping, bagging and boosting), but I'm going to focus on a simple 70/30 split of the data.  70% of the observations will be in the training data, and 30% in the test.
+
+```{r dataSplit}
+
+#we'll focus on the factored data
+n=dim(dat03)[1]
+nSplit = round(n*0.7,0)
+train = dat03[1:nSplit,]
+test = dat03[(nSplit+1):n,]
+
+```
+
+In our model building we'll fit on the `train` dataset and then build on the `test` dataset.
+
+The data we're working with in this lecture is the Behavioral Risk Factor Surveillance System (BRFSS) - "America's premier system of health-related telephone surveys".  We'll be focusing on the Connecticut subset, and will be predicting high blood-pressure (`bphigh`) with several predictors.  See the data dictionaries here for more details of the variables: [https://www.cdc.gov/brfss/annual_data/annual_2013.html](https://www.cdc.gov/brfss/annual_data/annual_2013.html).
+
+# RPART
+The traditional name for trees is *Classification and Regression Trees*, or CART.  The original CART algorithm was copyrighted, so some researchers re-created the algorithm, and implemented it in R as RPART, or *Recursive Partitioning and Regression Trees*.
+
+The idea is to create a decision tree from a flowchart like structure.  All the observations start at the top, and then are split into child nodes based on a decision rule.  Splitting continues until an endpoint (leaf) is reached, at which point a label is assigned in some manner.
+
+Some important components of the algorithm that I won't cover in detail 
+
+* How do you decide what splits to consider?
+* How do you choose the best split?
+* How do you decide to stop splitting?
+
+I'll focus more on the function itself, and direct you toward the important parts for building a tree.
+
+```
+rpart(formula, data, weights, subset, na.action = na.rpart, method,
+      model = FALSE, x = FALSE, y = TRUE, parms, control, cost, ...)
+```
+
+The format is much like in regression - a formula that defines the model, and a dataset.  
+```{r rpart01}
+
+###a simple classification tree
+mod.cart01 = rpart(bphigh~.,data=train)
+mod.cart01
+summary(mod.cart01)
+
+```
+
+You can see that the simple summary is a summary of the tree, and the summary gives a detailed description of each node, including all the splits it considered.  We'll look later at plotting.
+
+The important tree controls are passed as a list to the `control` argument.
+
+* `cp` is the "complexity parameter" - it measures how much improvement is needed for a split to be included in the model.
+* `minbucket` controls how small a node can be to be created
+* `minsplit` controls how small a node can be to be considered for a split
+
+```{r rpart02}
+#trying to build as large a tree as possible
+mod.cart02 = rpart(bphigh~.,data=train,control=list(cp=0.0,minbucket=0,minsplit=0))
+mod.cart03 = rpart(bphigh~.,data=train,control=list(cp=0.0041,minbucket=1,minsplit=2))
+```
+
+## Getting Optimal Trees
+```{r rpart.optimal}
+#getting optimal CP values
+printcp(mod.cart02)
+```
+
+What this table shows is the size of the tree for decreasing values of `cp` - as the tolerance for improvement goes down, the tree size goes up.  The column we care about is the `xerror` column - that's a cross-validated measure of error that we want to be as small as possible.  The plot below provides a visual representation of that column.
+
+```{r plotcp}
+plotcp(mod.cart02,las=2)
+```
+
+What we do is find the lowest `xerror` value, then calculate a CI around it.  The upper bound of that CI is the lowest reasonable `xerror` we should expect, so we pick the smallest tree that meets that value - in this case it's at a CP of 0.0041.
+
+Once we've identified the appropriate CP value we can either re-fit the tree with the appropriate CP value, or we can *prune* the tree by removing splits below that CP threshold.
+```{r pruning}
+#pruning trees is done using prune
+mod.cart02a = prune(mod.cart02,cp=0.0005)
+mod.cart02b = prune(mod.cart02,cp=0.004)#this should be the same mod.cart03
+
+mod.cart01 = mod.cart02b
+```
+
+## Plotting
+The best thing about CART over other ML algorithms is the ability to understand the decision making process - in that sense it falls somewhere between the explanatory nature of regression and the purely classification goals of Neural Networks and Deep Learning.
+
+Unfortunately the default plotting function for `rpart` objects is terrible, as you can see below.  Luckily there is a function `rattle::fancyRpartPlot()` to create usable tree plots.
+```{r rpart.plot}
+#plotting the trees is best through the rattle library
+plot(mod.cart01)#boo :(
+text(mod.cart01)
+fancyRpartPlot(mod.cart01)#yay! :)
+```
+
+There are three lines to each node by default:
+
+1.  The classification of the objects at the node
+2.  The split between classes at the node
+3.  The percentage of subjects that reach that node
+
+## Evaluation
+To evaluate the success of the model we'll run the test data through it, then compare the predicted results to the actual results.  `predict()` will be used to produce the predicted results.
+
+```{r evaluation}
+#predicting new values from the model
+#default is probabilities
+pred.cart01 = predict(mod.cart01,newdata=test)
+head(pred.cart01,10)
+pred.cart01 = pred.cart01[,1]#Just keep the Y probabilities
+```
+You can adjust what is predicted with the `type` argument, but probabilities are the default and are usually the most useful. Since `rpart` can predict multi-level outcomes it produces a prediction for all classes, but in this case we just need the first column.
+
+### ROC Curve
+Once we have the predicted probabilities we'll evaluate them using a **R**eceiver **O**perator **C**haracteristic curve.  There are two libraries that are commonly used to produce ROC curves in R: `ROCR` and `pROC`.  I'll look at `pROC` here, but `ROCR` works fine as well.
+
+```{r roc01,fig.height=5,fig.width=5}
+
+roc.cart01 = roc(test$bphigh,pred.cart01,ci=TRUE,levels=c("Yes","No"))
+roc.cart01
+roc.dat01 = coords(roc.cart01)
+roc.dat01
+plot(roc.cart01)
+```
+
+One nice thing about the `pROC` plot is that it forces the plotting space to be square - ROC curves should always be presented with the x- and y- axes the same length.
+
+We need to convert our predicted probabilities to Y/N values so we can evaluate the model.  To do that we'll use the 'best' argument in the `coords()` function to extract the optimal cutpoint - the default is to choose the highest *sens+spec* value, but there are many approaches to this problem.
+
+```{r roc02}
+
+opt.cart01 = coords(roc.cart01,x='best',transpose=TRUE)
+pred.cart01.value = pred.cart01 >= opt.cart01[1]
+
+```
+
+Once we have the predicted Y/N values we can compare them to the actual Y/N values in a 2x2 table, and then calculate a variety of accuracy measures on that table. I've included a custom function here that I wrote a while ago called `getAccuracy()` that is a *very fragile* way to get the sens/spec and other numbers - make very sure your table is oriented the right way for the function to work (see the comment).
+```{r getAccuracyTable}
+#a function to get the accuracy of the model from the predicted labels, should be of the form
+#           pred=Y  pred=N
+#label  Yes      a       b
+#        No      c       d
+getAccuracy = function(tab){
+    if(any(c(colnames(tab)[1],rownames(tab)[1])%in%c("No",0,FALSE)))
+        warning("Are you sure that your table is set up the right way?")
+    TP = tab[1,1]
+    FP = tab[2,1]
+    FN = tab[1,2]
+    TN = tab[2,2]
+    P = rowSums(tab)[1]
+    N = rowSums(tab)[2]
+    acc=(TP+TN)/(P+N)
+    errRate=(FP+FN)/(P+N)
+    sens=TP/P
+    spec=TN/N
+    prec=TP/(TP+FP)
+    F1=2*prec*sens/(prec+sens)
+    F2=(1+2^2)*prec*sens/(2^2*prec+sens)
+    F0.5=(1+0.5^2)*prec*sens/(0.5^2*prec+sens)
+    out=c(acc,errRate,sens,spec,prec,F1,F2,F0.5)
+    names(out) = c('acc','errRate','sens','spec','prec','F1','F2','F0.5')
+    out
+}
+
+#Note that I have to flip the columns to make the diagonal line up right
+tab.cart01 = table(test$bphigh,pred.cart01.value)[,2:1]
+tab.cart01
+getAccuracy(tab.cart01)
+```
+
+# Breakout Activity
+We're going back to the Framingham data to see how well we can predict smoking status. Build a CART model predicting smoking status - use whatever variables you see fit.  I'll start everyone off with the same training/test split.
+
+```{r fram01}
+
+fram = read.csv("data/framinghamFirst.csv",header=TRUE, 
+               na.strings=".",stringsAsFactors=FALSE)
+fram = fram %>%
+  select(-CIGPDAY) #we obviously need to drop this
+
+#any data formatting you should do here first
+set.seed(42)
+n=dim(fram)[1]
+nSplit = round(n*0.7,0)
+train.fram = fram[1:nSplit,]
+test.fram = fram[(nSplit+1):n,]
+
+
+```

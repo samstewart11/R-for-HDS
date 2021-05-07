@@ -38,6 +38,7 @@ library(table1)
 library(HSAUR)
 library(ggpubr)
 library(gee)
+library(MuMIn)
 
 #GEE example data - if you don't want to load a package you can load a
 #dataset from it like this (though you'll still need to download the package)
@@ -91,7 +92,8 @@ Imbalance in drug-use between groups, many missing values in follow-up.  Let's t
 
 ```{r trajectories,fig.height=6,fig.width=7}
 
-p1 = BtheB.long %>%
+
+p1= BtheB.long %>%
   ggplot(aes(x=time,y=beck,color=treatment))+
   geom_point()+
   geom_line(aes(group=ID))
@@ -223,6 +225,7 @@ cor02 %>% kable(digits=4,caption='Exchangable') %>% kable_styling()
 cor03 %>% kable(digits=4,caption='Unstructured') %>% kable_styling()
 cor04 %>% kable(digits=4,caption='AR-M') %>% kable_styling()
 
+
 ```
 
 # Breakout Session
@@ -236,6 +239,29 @@ We'll use a second dataset from the same library called `HSAUR::respiratory`, fr
 ```{r breakout}
 
 data(respiratory)
+
+dat.resp = respiratory %>% tibble %>%
+  mutate(month=paste0("month.",month))%>%
+  pivot_wider(names_from=month,values_from=status)%>%
+  relocate(subject)
+
+#question 1: 
+table1(~centre+sex+age+month.0+month.1+month.2+month.3+month.4|treatment,data=dat.resp)
+
+#just converting the outcome to binary
+dat.resp01 = respiratory %>% 
+  mutate(status = 1*(status=='good'))
+
+modResp01 = gee(status~centre+treatment+sex+age,data=dat.resp01,family=binomial,id=subject,corstr='AR-M')
+
+respiratory %>% tibble %>%
+  group_by(month,treatment) %>%
+  summarize(poor=sum(status=='poor'),
+            good=sum(status=='good')) %>%
+  pivot_longer(cols=c(poor,good))%>%
+  mutate(groupName = paste0(treatment,":",name))%>%
+  ggplot(aes(x=month,y=value,group=interaction(treatment,name),fill=name))+
+  geom_bar(stat='identity',position='dodge')
 
 ```
 
